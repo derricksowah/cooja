@@ -32,6 +32,7 @@ package org.contikios.cooja;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.LinkedHashMap;
+
 import org.contikios.cooja.contikimote.ContikiMoteType;
 import org.contikios.cooja.motes.DisturberMoteType;
 import org.contikios.cooja.motes.ImportAppMoteType;
@@ -44,6 +45,7 @@ import org.contikios.cooja.mspmote.plugins.MspStackWatcher;
 import org.contikios.cooja.plugins.BaseRSSIconf;
 import org.contikios.cooja.plugins.BufferListener;
 import org.contikios.cooja.plugins.DGRMConfigurator;
+import org.contikios.cooja.plugins.HeadlessPcapLogger;
 import org.contikios.cooja.plugins.LogListener;
 import org.contikios.cooja.plugins.Mobility;
 import org.contikios.cooja.plugins.MoteInformation;
@@ -68,8 +70,13 @@ import org.contikios.mrm.MRM;
  * Class for loading and querying dynamic extensions.
  */
 public class ExtensionManager {
-  static final LinkedHashMap<String, Class<? extends Plugin>> builtinPlugins = new LinkedHashMap<>();
-  static final LinkedHashMap<String, Class<? extends RadioMedium>> builtinRadioMediums = new LinkedHashMap<>();
+
+  static final LinkedHashMap<String, Class<? extends Plugin>>
+      builtinPlugins = new LinkedHashMap<>();
+
+  static final LinkedHashMap<String, Class<? extends RadioMedium>>
+      builtinRadioMediums = new LinkedHashMap<>();
+
   static {
     registerBuiltinPlugin(Visualizer.class);
     registerBuiltinPlugin(LogListener.class);
@@ -79,6 +86,9 @@ public class ExtensionManager {
     registerBuiltinPlugin(MoteInterfaceViewer.class);
     registerBuiltinPlugin(VariableWatcher.class);
     registerBuiltinPlugin(RadioLogger.class);
+
+    registerBuiltinPlugin(HeadlessPcapLogger.class);
+
     registerBuiltinPlugin(ScriptRunner.class);
     registerBuiltinPlugin(Notes.class);
     registerBuiltinPlugin(BufferListener.class);
@@ -98,100 +108,196 @@ public class ExtensionManager {
     registerBuiltinRadioMedium(SilentRadioMedium.class);
     registerBuiltinRadioMedium(LogisticLoss.class);
     registerBuiltinRadioMedium(MRM.class);
-
-  }
-  private static void registerBuiltinPlugin(final Class<? extends Plugin> pluginClass) {
-    builtinPlugins.put(pluginClass.getName(), pluginClass);
   }
 
-  private static void registerBuiltinRadioMedium(Class<? extends RadioMedium> radioMediumClass) {
-    builtinRadioMediums.put(radioMediumClass.getName(), radioMediumClass);
+  private static void registerBuiltinPlugin(
+      final Class<? extends Plugin> pluginClass) {
+
+    builtinPlugins.put(
+        pluginClass.getName(),
+        pluginClass);
+  }
+
+  private static void registerBuiltinRadioMedium(
+      Class<? extends RadioMedium> radioMediumClass) {
+
+    builtinRadioMediums.put(
+        radioMediumClass.getName(),
+        radioMediumClass);
   }
 
   /** Get the class for a named plugin, returns null if not found. */
-  public static Class<? extends Plugin> getPluginClass(Cooja cooja, String name) {
+  public static Class<? extends Plugin> getPluginClass(
+      Cooja cooja,
+      String name) {
+
     var clazz = builtinPlugins.get(name);
+
     if (clazz != null) {
       return clazz;
     }
+
     for (var candidate : cooja.getRegisteredPlugins()) {
       if (name.equals(candidate.getName())) {
         clazz = candidate;
         break;
       }
     }
+
     return clazz;
   }
 
   /** Get the class for a named radio medium, returns null if not found. */
-  public static Class<? extends RadioMedium> getRadioMediumClass(Cooja cooja, String name) {
+  public static Class<? extends RadioMedium> getRadioMediumClass(
+      Cooja cooja,
+      String name) {
+
     var clazz = builtinRadioMediums.get(name);
+
     if (clazz != null) {
       return clazz;
     }
+
     for (var candidate : cooja.getRegisteredRadioMediums()) {
       if (name.equals(candidate.getName())) {
         clazz = candidate;
         break;
       }
     }
+
     return clazz;
   }
 
   /** Create a radio medium of a certain class, returns null on failure. */
-  public static RadioMedium createRadioMedium(Cooja cooja, Simulation sim, String name)
-          throws Cooja.SimulationCreationException {
+  public static RadioMedium createRadioMedium(
+      Cooja cooja,
+      Simulation sim,
+      String name)
+      throws Cooja.SimulationCreationException {
+
     if (name.startsWith("se.sics")) {
-      name = name.replaceFirst("^se\\.sics", "org.contikios");
+      name =
+          name.replaceFirst(
+              "^se\\.sics",
+              "org.contikios");
     }
+
     return switch (name) {
-      case "org.contikios.cooja.radiomediums.UDGM" -> new UDGM(sim);
-      case "org.contikios.cooja.radiomediums.UDGMConstantLoss" -> new UDGMConstantLoss(sim);
-      case "org.contikios.cooja.radiomediums.DirectedGraphMedium" -> new DirectedGraphMedium(sim);
-      case "org.contikios.cooja.radiomediums.SilentRadioMedium" -> new SilentRadioMedium(sim);
-      case "org.contikios.cooja.radiomediums.LogisticLoss" -> new LogisticLoss(sim);
-      case "org.contikios.mrm.MRM" -> new MRM(sim);
+
+      case "org.contikios.cooja.radiomediums.UDGM" ->
+          new UDGM(sim);
+
+      case "org.contikios.cooja.radiomediums.UDGMConstantLoss" ->
+          new UDGMConstantLoss(sim);
+
+      case "org.contikios.cooja.radiomediums.DirectedGraphMedium" ->
+          new DirectedGraphMedium(sim);
+
+      case "org.contikios.cooja.radiomediums.SilentRadioMedium" ->
+          new SilentRadioMedium(sim);
+
+      case "org.contikios.cooja.radiomediums.LogisticLoss" ->
+          new LogisticLoss(sim);
+
+      case "org.contikios.mrm.MRM" ->
+          new MRM(sim);
+
       default -> {
-        var clazz = getRadioMediumClass(cooja, name);
+
+        var clazz =
+            getRadioMediumClass(
+                cooja,
+                name);
+
         if (clazz == null) {
-          throw new Cooja.SimulationCreationException("Could not load " + name, null);
+          throw new Cooja.SimulationCreationException(
+              "Could not load " + name,
+              null);
         }
+
         try {
-          yield clazz.getConstructor(Simulation.class).newInstance(sim);
+
+          yield clazz
+              .getConstructor(Simulation.class)
+              .newInstance(sim);
+
         } catch (Exception e) {
-          throw new Cooja.SimulationCreationException("Could not construct " + name, e);
+
+          throw new Cooja.SimulationCreationException(
+              "Could not construct " + name,
+              e);
         }
       }
     };
   }
 
   /** Create a mote of a certain class, returns null on failure. */
-  public static MoteType createMoteType(Cooja cooja, String name) throws MoteType.MoteTypeCreationException {
+  public static MoteType createMoteType(
+      Cooja cooja,
+      String name)
+      throws MoteType.MoteTypeCreationException {
+
     if (name.startsWith("se.sics")) {
-      name = name.replaceFirst("^se\\.sics", "org.contikios");
+      name =
+          name.replaceFirst(
+              "^se\\.sics",
+              "org.contikios");
     }
+
     return switch (name) {
-      case "org.contikios.cooja.motes.ImportAppMoteType" -> new ImportAppMoteType();
-      case "org.contikios.cooja.motes.DisturberMoteType" -> new DisturberMoteType();
-      case "org.contikios.cooja.contikimote.ContikiMoteType" -> new ContikiMoteType(cooja);
-      case "org.contikios.cooja.mspmote.SkyMoteType" -> new SkyMoteType();
-      case "org.contikios.cooja.mspmote.Z1MoteType" -> new Z1MoteType();
+
+      case "org.contikios.cooja.motes.ImportAppMoteType" ->
+          new ImportAppMoteType();
+
+      case "org.contikios.cooja.motes.DisturberMoteType" ->
+          new DisturberMoteType();
+
+      case "org.contikios.cooja.contikimote.ContikiMoteType" ->
+          new ContikiMoteType(cooja);
+
+      case "org.contikios.cooja.mspmote.SkyMoteType" ->
+          new SkyMoteType();
+
+      case "org.contikios.cooja.mspmote.Z1MoteType" ->
+          new Z1MoteType();
+
       default -> {
+
         Class<? extends MoteType> moteType = null;
-        for (var clazz : cooja.getRegisteredMoteTypes()) {
+
+        for (var clazz :
+            cooja.getRegisteredMoteTypes()) {
+
           if (name.equals(clazz.getName())) {
             moteType = clazz;
             break;
           }
         }
+
         if (moteType == null) {
-          throw new MoteType.MoteTypeCreationException("MoteType " + name + " not registered");
+
+          throw new MoteType.MoteTypeCreationException(
+              "MoteType "
+              + name
+              + " not registered");
         }
+
         try {
-          yield moteType.getConstructor().newInstance();
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
-                 NoSuchMethodException e) {
-          throw new MoteType.MoteTypeCreationException("Could not create " + name, e);
+
+          yield moteType
+              .getConstructor()
+              .newInstance();
+
+        } catch (
+            InstantiationException
+                | IllegalAccessException
+                | InvocationTargetException
+                | NoSuchMethodException e) {
+
+          throw new MoteType.MoteTypeCreationException(
+              "Could not create "
+              + name,
+              e);
         }
       }
     };
